@@ -158,7 +158,7 @@ class HyperclassifierTuning:
         best_score = 0
 
         for key in self.models.keys():
-            print('GridSearchCV for {}'.format(key), '...')
+            print('Search for {}'.format(key), '...')
             assert search in ('grid', 'random'), 'search parameter out of range'
             if search=='grid':
                 grid = GridSearchCV(self.models[key], self.params[key], **search_kwargs)
@@ -256,7 +256,7 @@ def evaluate_model(model, X_test, y_test, category_names):
     - category_names: 36 category labels
 
     Output:
-    - [0]: dataframe with evaluation eparated for column classes
+    - [0]: dataframe with evaluation separated for column classes
     - [1]: dataframe with mean column values of [0]
     """
     y_pred = model.predict(X_test)
@@ -318,13 +318,16 @@ def main():
         # runtimes on an average local machine
         # for more reliable results: set cv = 10, n_iter=10
         best_model = search.train_model(X_train, y_train, search='random',
-                        scoring=scorer, n_iter=2, cv=2, iid=False)
+                        scoring=scorer, n_iter=3, cv=2, iid=False)
 
         print('Evaluating model...')
-        # not using HyperclassifierTuning evaluation given above as it does not split by categories
+        print('    Giving the F2 score of the best model found:', round(best_model.best_score_, 3))
+        print('    The best model:', best_model.best_estimator_)
+
+        print('\n    Giving the F1 score per category and outcome:\n')
         evaluate_model(best_model, X_test, y_test, category_names)[0]
 
-        print('Saving model...\n    MODEL: {}'.format(model_filepath))
+        print('\nSaving model...\n    MODEL: {}'.format(model_filepath))
         save_model(best_model, model_filepath)
         print('Trained model saved!')
 
