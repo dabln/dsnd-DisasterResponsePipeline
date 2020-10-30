@@ -15,6 +15,7 @@ def return_graphs(df):
 
     # extract data for visuals
     categories = df.iloc[:,4:40].sum().sort_values(ascending=False)
+    categories_names = categories.index.to_series().apply(lambda x: x.replace('_', ' '))
     genre_counts = df.groupby('genre').count()['message']
     genre_names = list(genre_counts.index)
 
@@ -24,12 +25,12 @@ def return_graphs(df):
     graph_one = []
     graph_one.append(
       go.Bar(
-      x = categories.index,
-      y = categories,
+      x = categories_names,
+      y = categories
       )
     )
     layout_one = dict(title = 'Distribution of Message Categories',
-                xaxis = dict(title = 'Category',),
+                xaxis = dict(title = 'Category'),
                 yaxis = dict(title = 'Count'),
                 )
 
@@ -41,7 +42,7 @@ def return_graphs(df):
       )
     )
     layout_two = dict(title = 'Distribution of Message Genres',
-                xaxis = dict(title = 'Genre',),
+                xaxis = dict(title = 'Genre'),
                 yaxis = dict(title = 'Count'),
                 )
 
