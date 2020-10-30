@@ -1,3 +1,4 @@
+# ETL pipeline
 # example use in comandline: python process_data.py disaster_messages.csv disaster_categories.csv disaster.db
 
 import sys
@@ -51,7 +52,6 @@ def clean_data(df):
 
 def save_data(df, database_filename):
     # save the clean dataset into an sqlite database
-    #engine = create_engine('sqlite:///disaster.db') # <- database_filename
     engine = create_engine('sqlite:///' + database_filename)
     df.to_sql('disaster_table', engine, index=False, if_exists='replace')
 
