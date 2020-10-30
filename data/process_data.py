@@ -1,5 +1,5 @@
 # ETL pipeline
-# example use in comandline: python process_data.py disaster_messages.csv disaster_categories.csv disaster.db
+# example use in comandline: python process_data.py disaster_messages.csv disaster_categories.csv DisasterResponse.db
 
 import sys
 import pandas as pd
