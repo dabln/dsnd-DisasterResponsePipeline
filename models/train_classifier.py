@@ -1,3 +1,6 @@
+# ML pipeline
+# example use in comandline: python train_classifier.py ../data/DisasterResponse.db disaster_model.pkl
+
 import sys
 import os
 import numpy as np
@@ -33,14 +36,14 @@ def load_data(database_filepath, n_draws=None):
     Load data from a DB, specifically from a disaster.db the table 'disaster_table'.
 
     Input:
-    n_draws (optional): sample draws from full file; can be used to get the code up and
-                        running with a reduced workload for estimation
+    n_draws (optional): sample draws from message database; can be used to run
+                        the pipeline with a reduced workload for estimation
     Output:
     X: a Pandas series as model independent variable
     Y: a Pandas dataframe as model dependent variables
     '''
     engine = create_engine('sqlite:///' + os.path.join(os.getcwd(), database_filepath))
-        # , os.pardir, 'data') + '/disaster.db')
+        # alternative to database_filepath input with ".." is to use os.pardir
 
     df = pd.read_sql_table('disaster_table', con=engine)
 
@@ -58,7 +61,7 @@ def load_data(database_filepath, n_draws=None):
 
     if n_draws:
         X = X.sample(n=n_draws) # default is no replacement
-        y = y.loc[X.index] # same lines
+        y = y.loc[X.index]      # same rows from X and y
     return X, y, category_names
 
 def tokenize(text, stop_words_remove=True):
@@ -79,9 +82,18 @@ def tokenize(text, stop_words_remove=True):
 
 class HyperclassifierTuning:
     # based on code from: https://github.com/davidsbatista/machine-learning-notebooks/blob/master/hyperparameter-across-models.ipynb
-    # my enhancements:
-    # add support for pipelines, train test split, RandomizedSearchCV,
-    # output best overall model, assert statements, description
+    # the code was rewritten
+    #
+    # my documentation enhancements:
+    #   added code documentation including docstrings
+    #
+    # my functionality enhancements:
+    #   added option to use RandomizedSearchCV
+    #   the best overall model is provided by train_model()
+    #   output dataframe is simplified as standard option
+    #
+    # Code is also released as a package but not used here for simpler Udacity project review:
+    # https://github.com/dabln/HyperclassifierSearch
     """Train multiple classifiers/pipelines with GridSearchCV or RandomizedSearchCV.
 
     HyperclassifierTuning implements a "train_model" and "evaluate_model" method.
@@ -116,7 +128,6 @@ class HyperclassifierTuning:
     search = HyperclassifierTuning(models, params)
     search.train_model(X, y)
     search.evaluate_model()
-
     """
     def __init__(self, models, params):
         self.models = models
@@ -193,6 +204,12 @@ class HyperclassifierTuning:
 
 
 def build_model():
+    """
+    Defining the input for the HyperclassifierTuning class.
+
+    Input:  None
+    Output: model definition, parameter space to evaluate, scorer
+    """
     models = {
         'AdaBoost': Pipeline([
             ('tfidf', TfidfVectorizer(tokenizer=tokenize)),
@@ -202,6 +219,7 @@ def build_model():
             ('tfidf', TfidfVectorizer(tokenizer=tokenize)),
             ('clf', MultiOutputClassifier(RandomForestClassifier()))
         ]),
+        # skipped parts to allow for shorter runtime of the pipeline
         #'LinearSVC': Pipeline([
         #    ('tfidf', TfidfVectorizer(tokenizer=tokenize)),
         #    ('clf', MultiOutputClassifier(LinearSVC(max_iter=100, class_weight='balanced')))
@@ -218,6 +236,7 @@ def build_model():
     params = {
         'AdaBoost': { 'clf__estimator__n_estimators': np.arange(16,32+1) },
         'RandomForest': { 'clf__estimator__n_estimators': np.arange(7,200+1) }
+        # skipped parts to allow for shorter runtime of the pipeline
         #'LinearSVC': { 'clf__estimator__C': np.linspace(0.1, 100, num=1000) }
         #'GradientBoosting' : { 'clf__estimator__learning_rate': [0.8, 1.0] },
         #'LogisticRegression': { 'clf__estimator__C': [0.1, 1] }
@@ -263,9 +282,9 @@ def save_model(model, model_filepath):
     with open(model_filepath, 'wb') as file:
         pickle.dump(model, file)
 
-#Data for the app: scatter plot for word count per message
+# Data for the app: scatter plot for word count per message
 def save_scatter_data(X):
-    # message lengths in words including stop words
+    # message lengths in terms of words including stop words
     message_words_stopwords = X.apply(lambda x: tokenize(x, stop_words_remove=False)).apply(len).value_counts()
     # message lengths in words without stop words
     message_words_no_stopwords = X.apply(tokenize).apply(len).value_counts()
@@ -274,6 +293,8 @@ def save_scatter_data(X):
     messages2 = pd.DataFrame(message_words_no_stopwords).reset_index()
     messages2['type'] = 'without stopwords'
     message_scatter_data = pd.concat([messages, messages2])
+    # using a fixed file path is favored such that running the pipeline is
+    # not complicated in terms of expecting more parameters
     with open('../data/scatter_data.pkl', 'wb') as file:
         pickle.dump(message_scatter_data, file)
 
@@ -281,7 +302,10 @@ def main():
     if len(sys.argv) == 3:
         database_filepath, model_filepath = sys.argv[1:]
         print('Loading data...\n    DATABASE: {}'.format(database_filepath))
-        X, y, category_names = load_data(database_filepath, n_draws=2000)
+
+        # not all messages are used for classification to allow for reasonable
+        # runtimes of the pipeline on an average local machine
+        X, y, category_names = load_data(database_filepath, n_draws=5000)
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
         print('Building model...')
@@ -290,9 +314,9 @@ def main():
         print('Training model...')
         search = HyperclassifierTuning(models, params)
 
-        # cv and n_iter are set too low for useful results
-        # -> allow reasonable runtimes on an average local machine
-        # set cv = 10, n_iter=10 for useful results
+        # cv and n_iter values are set quite low to allow for reasonable
+        # runtimes on an average local machine
+        # for more reliable results: set cv = 10, n_iter=10
         best_model = search.train_model(X_train, y_train, search='random',
                         scoring=scorer, n_iter=2, cv=2, iid=False)
 
@@ -311,10 +335,8 @@ def main():
         print('Please provide the filepath of the disaster messages database '\
               'as the first argument and the filepath of the pickle file to '\
               'save the model to as the second argument. \n\nExample: python '\
-              'train_classifier.py ../data/disaster.db classifier.pkl')
-
-    # example: run in commandline as
-    # python train_classifier.py ../data/disaster.db disaster_model.pkl
+              'train_classifier.py ../data/DisasterResponse.db '\
+              'disaster_model.pkl')
 
 if __name__ == '__main__':
     main()
