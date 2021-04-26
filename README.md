@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="https://github.com/janhenner/DisasterResponsePipeline/blob/master/img/DisasterResponseProject.png?raw=true" alt="Disaster Response Project" width="700"/><br>
+</div>
+
 # Web app for NLP classification
 Part of the Udacity Data Science Nanodegree, the __Disaster Response Project__.
 
